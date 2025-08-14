@@ -1,2 +1,14 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script>
+    import CurrencyConverter from "$lib/components/CurrencyConverter.svelte";
+</script>
+
+<CurrencyConverter />
+
+<style>
+    :global {
+        body {
+            background-color: #222;
+            color: #fff;
+        }
+    }
+</style>
