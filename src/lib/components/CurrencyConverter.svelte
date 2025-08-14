@@ -1,13 +1,30 @@
 <script lang="ts">
     import dummyRates from "$lib/utils/dummy-rates";
+    import { untrack } from "svelte";
 
-    let baseValue = $state(1);
+    let baseValue: number | undefined = $state(1);
     let baseCurrency = $state("usd");
     let baseRates = $derived(dummyRates[baseCurrency]);
     let targetCurrency = $state("eur");
-    let targetValue = $derived(
-        baseValue && baseRates[targetCurrency] &&
-        baseValue * baseRates[targetCurrency]);
+    let targetValue: number | undefined = $state();
+
+    $effect(() => {
+        targetValue = baseValue && baseRates[targetCurrency] &&
+            baseValue * baseRates[targetCurrency];
+        console.log(
+            "Calculating Target",
+            untrack(() => targetValue)
+        );
+    })
+
+    $effect(() => {
+        baseValue = targetValue && baseRates[targetCurrency] &&
+            targetValue / baseRates[targetCurrency];
+        console.log(
+            "Calculating Base",
+            untrack(() => baseValue)
+        );
+    })
 </script>
 
 <div class="wrapper">
@@ -33,7 +50,7 @@
                bind:value={
                () => baseValue,
                (value) => {
-                    if (value < 0) {
+                    if (value && value < 0) {
                         baseValue = 1;
                         return;
                     }
