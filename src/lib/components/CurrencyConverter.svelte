@@ -5,39 +5,35 @@
     let baseCurrency = $state("usd");
     let baseRates = $derived(dummyRates[baseCurrency]);
     let targetCurrency = $state("eur");
-    let targetValue: number | undefined = $state(calculateTarget());
+    // let targetValue: number | undefined = $state(calculateTarget());
+
+    let getterCallCount = 0;
+    let setterCallCount = 0;
+
+    let targetValue = {
+        get value() {
+            getterCallCount++;
+            console.log("getter call count: ", getterCallCount);
+            console.log("target: ", calculateTarget());
+            return calculateTarget();
+        },
+        set value(v) {
+            setterCallCount++;
+            console.log("setter call count: ", setterCallCount);
+            console.log("base: ", calculateBase(v));
+            baseValue = calculateBase(v);
+        }
+    }
 
     function calculateTarget() {
         return baseValue && baseRates[targetCurrency] && +(baseValue * baseRates[targetCurrency]).toFixed(3);
     }
 
-    function calculateBase() {
+    function calculateBase(targetValue?: number) {
         return targetValue && baseRates[targetCurrency] && +(targetValue / baseRates[targetCurrency]).toFixed(3);
     }
 
-    function updateBaseValue(value: number) {
-        baseValue = value;
-        targetValue = calculateTarget();
-        console.log("Calculate target value: ", targetValue);
-    }
 
-    function updateTargetValue(value: number) {
-        targetValue = value;
-        baseValue = calculateBase();
-        console.log("Calculate base value: ", baseValue);
-    }
-
-    function updateBaseCurrency(value: string) {
-        baseCurrency = value;
-        targetValue = calculateTarget();
-        console.log("Calculate target value: ", targetValue);
-    }
-
-    function updateTargetCurrency(value: string) {
-        targetCurrency = value;
-        baseValue = calculateBase();
-        console.log("Calculate target value: ", targetValue);
-    }
 </script>
 
 <div class="wrapper">
@@ -60,12 +56,9 @@
     <div class="base">
         <!--suppress CommaExpressionJS -->
         <input type="number"
-               value={baseValue}
-               oninput={(e) => {
-                   updateBaseValue(+e.currentTarget.value);
-               }}
+               bind:value={baseValue}
         />
-        <select value={baseCurrency} oninput={(e) => updateBaseCurrency(e.currentTarget.value)}>
+        <select bind:value={baseCurrency}>
             <option value="usd">US Dollar</option>
             <option value="eur">Euro</option>
             <option value="gbp">Pound Sterling</option>
@@ -73,11 +66,8 @@
     </div>
     <div class="target">
         <input type="number"
-               value={targetValue}
-               oninput={(e) => {
-                    updateTargetValue(+e.currentTarget.value);
-        }} />
-        <select value={targetCurrency} oninput={(e) => updateTargetCurrency(e.currentTarget.value)}>
+               bind:value={targetValue.value} />
+        <select bind:value={targetCurrency}>
             <option value="usd">US Dollar</option>
             <option value="eur">Euro</option>
             <option value="gbp">Pound Sterling</option>
