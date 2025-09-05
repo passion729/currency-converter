@@ -3,27 +3,35 @@
 
     let baseValue: number | undefined = $state(1);
     let baseCurrency = $state("usd");
-    let baseRates = $derived(dummyRates[baseCurrency]);
+    let baseRates: Record<string, number> = $derived({});
     let targetCurrency = $state("eur");
-    // let targetValue: number | undefined = $state(calculateTarget());
 
-    let getterCallCount = 0;
-    let setterCallCount = 0;
+    const currenciesPromise = fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.min.json")
+        .then((r) => r.json());
 
     let targetValue = {
         get value() {
-            getterCallCount++;
-            console.log("getter call count: ", getterCallCount);
             console.log("target: ", calculateTarget());
             return calculateTarget();
         },
         set value(v) {
-            setterCallCount++;
-            console.log("setter call count: ", setterCallCount);
             console.log("base: ", calculateBase(v));
             baseValue = calculateBase(v);
         }
+    };
+
+    $inspect(baseCurrency);
+
+    async function fetchRates() {
+        const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${baseCurrency}.json`);
+        const resJson = await res.json();
+        console.log(resJson);
+        baseRates = resJson[baseCurrency];
     }
+
+    $effect(() => {
+        fetchRates()
+    })
 
     function calculateTarget() {
         return baseValue && baseRates[targetCurrency] && +(baseValue * baseRates[targetCurrency]).toFixed(3);
@@ -36,8 +44,11 @@
 
 </script>
 
-<div class="wrapper">
-    <div class="conversion">
+{#await currenciesPromise}
+    <p>Loading...</p>
+{:then currencies}
+    <div class="wrapper">
+        <div class="conversion">
         <span class="base">
             {Number(1).toLocaleString("en-US", {
                 style: "currency",
@@ -45,35 +56,39 @@
                 currencyDisplay: "name"
             })} equals
         </span>
-        <span class="target">
-            {baseRates[targetCurrency].toLocaleString("en-US", {
+            <span class="target">
+            {baseRates[targetCurrency]?.toLocaleString("en-US", {
                 style: "currency",
                 currency: targetCurrency,
                 currencyDisplay: "name"
             })}
         </span>
+        </div>
+        <div class="base">
+            <!--suppress CommaExpressionJS -->
+            <input type="number"
+                   bind:value={baseValue}
+            />
+            <select bind:value={baseCurrency}>
+                <!--将对象抽取为[key, value]的list-->
+                {#each Object.entries(currencies) as [key, value]}
+                    <option value={key}>{value}</option>
+                {/each}
+            </select>
+        </div>
+        <div class="target">
+            <input type="number"
+                   bind:value={targetValue.value} />
+            <select bind:value={targetCurrency}>
+                <!--将对象抽取为[key, value]的list-->
+                {#each Object.entries(currencies) as [key, value]}
+                    <option value={key}>{value}</option>
+                {/each}
+            </select>
+        </div>
     </div>
-    <div class="base">
-        <!--suppress CommaExpressionJS -->
-        <input type="number"
-               bind:value={baseValue}
-        />
-        <select bind:value={baseCurrency}>
-            <option value="usd">US Dollar</option>
-            <option value="eur">Euro</option>
-            <option value="gbp">Pound Sterling</option>
-        </select>
-    </div>
-    <div class="target">
-        <input type="number"
-               bind:value={targetValue.value} />
-        <select bind:value={targetCurrency}>
-            <option value="usd">US Dollar</option>
-            <option value="eur">Euro</option>
-            <option value="gbp">Pound Sterling</option>
-        </select>
-    </div>
-</div>
+{/await}
+
 
 <style lang="scss">
   .wrapper {
