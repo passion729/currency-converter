@@ -1,65 +1,29 @@
 <script lang="ts">
-    import dummyRates from "$lib/utils/dummy-rates";
+    import CurrencyConverter from "$lib/utils/currency-converter.svelte";
 
-    let baseValue: number | undefined = $state(1);
-    let baseCurrency = $state("usd");
-    let baseRates: Record<string, number> = $derived({});
-    let targetCurrency = $state("eur");
-
-    const currenciesPromise = fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.min.json")
-        .then((r) => r.json());
-
-    let targetValue = {
-        get value() {
-            console.log("target: ", calculateTarget());
-            return calculateTarget();
-        },
-        set value(v) {
-            console.log("base: ", calculateBase(v));
-            baseValue = calculateBase(v);
-        }
-    };
-
-    $inspect(baseCurrency);
-
-    async function fetchRates() {
-        const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${baseCurrency}.json`);
-        const resJson = await res.json();
-        console.log(resJson);
-        baseRates = resJson[baseCurrency];
-    }
-
-    $effect(() => {
-        fetchRates()
-    })
-
-    function calculateTarget() {
-        return baseValue && baseRates[targetCurrency] && +(baseValue * baseRates[targetCurrency]).toFixed(3);
-    }
-
-    function calculateBase(targetValue?: number) {
-        return targetValue && baseRates[targetCurrency] && +(targetValue / baseRates[targetCurrency]).toFixed(3);
-    }
-
-
+    const cc = new CurrencyConverter(1, "usd", "eur");
+    // Do not do this, this is a getter, always return true
+    // const { error, loading } = new CurrencyConverter(1, "usd", "eur");
 </script>
 
-{#await currenciesPromise}
+{#if cc.error}
+    <p>{cc.error}</p>
+{:else if cc.loading}
     <p>Loading...</p>
-{:then currencies}
+{:else}
     <div class="wrapper">
         <div class="conversion">
         <span class="base">
             {Number(1).toLocaleString("en-US", {
                 style: "currency",
-                currency: baseCurrency,
+                currency: cc.baseCurrency,
                 currencyDisplay: "name"
             })} equals
         </span>
             <span class="target">
-            {baseRates[targetCurrency]?.toLocaleString("en-US", {
+            {cc.rate?.toLocaleString("en-US", {
                 style: "currency",
-                currency: targetCurrency,
+                currency: cc.targetCurrency,
                 currencyDisplay: "name"
             })}
         </span>
@@ -67,28 +31,32 @@
         <div class="base">
             <!--suppress CommaExpressionJS -->
             <input type="number"
-                   bind:value={baseValue}
+                   bind:value={cc.baseValue}
             />
-            <select bind:value={baseCurrency}>
+            <select bind:value={cc.baseCurrency}>
                 <!--将对象抽取为[key, value]的list-->
-                {#each Object.entries(currencies) as [key, value]}
+                {#each Object.entries(cc.currencies) as [key, value]}
                     <option value={key}>{value}</option>
                 {/each}
             </select>
         </div>
         <div class="target">
             <input type="number"
-                   bind:value={targetValue.value} />
-            <select bind:value={targetCurrency}>
+                   bind:value={cc.targetValue} />
+            <select bind:value={cc.targetCurrency}>
                 <!--将对象抽取为[key, value]的list-->
-                {#each Object.entries(currencies) as [key, value]}
+                {#each Object.entries(cc.currencies) as [key, value]}
                     <option value={key}>{value}</option>
                 {/each}
             </select>
         </div>
+        <div class="actions">
+            <button onclick={() => cc.switch()}>
+                Switch
+            </button>
+        </div>
     </div>
-{/await}
-
+{/if}
 
 <style lang="scss">
   .wrapper {
